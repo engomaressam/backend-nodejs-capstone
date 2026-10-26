@@ -1,0 +1,7 @@
+# Build context for secondchancewebsite/Dockerfile (repository root)
+.git
+**/node_modules
+**/build
+**/.env
+secondChance-backend
+sentiment

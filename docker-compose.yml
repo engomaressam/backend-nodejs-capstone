@@ -1,0 +1,60 @@
+# SecondChance: MongoDB + back end + sentiment service + website
+# Usage: copy .env.sample to .env, set the secrets, then `docker compose up -d --build`.
+# Website: http://localhost:9000   API: http://localhost:3060   Sentiment: http://localhost:3070
+name: secondchance
+
+services:
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./secondChance-backend
+    image: secondchance-backend
+    restart: unless-stopped
+    environment:
+      MONGO_URL: mongodb://root:${MONGO_ROOT_PASSWORD}@mongodb:27017
+      MONGO_DB: secondChance
+      MONGO_COLLECTION: secondChanceItems
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - item-images:/usr/src/app/public/images
+    ports:
+      - "127.0.0.1:3060:3060"
+
+  sentiment:
+    build: ./sentiment
+    image: secondchance-sentiment
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3070:3000"
+
+  website:
+    build:
+      context: .
+      dockerfile: secondchancewebsite/Dockerfile
+    image: secondchance-website
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:3060
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:9000:9000"
+
+volumes:
+  mongo-data:
+  item-images:

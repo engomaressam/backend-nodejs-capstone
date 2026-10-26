@@ -1,0 +1,14 @@
+{
+  "name": "secondchancewebsite",
+  "version": "1.0.0",
+  "description": "Serves the SecondChance landing page and React build, and proxies API calls to the back end",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "http-proxy-middleware": "^3.0.5"
+  }
+}
