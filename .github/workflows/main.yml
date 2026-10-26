@@ -1,0 +1,78 @@
+name: 'CI/CD'
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint_js:
+    name: Lint JavaScript Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install ESLint
+        run: |
+          npm init -y
+          npm install eslint@^8.0.1 eslint-config-standard eslint-plugin-import@^2.25.2 eslint-plugin-n@^16.0.0 eslint-plugin-promise@^6.0.0
+
+      - name: Run Linter
+        run: |
+          # Lint the back-end, sentiment and website JavaScript files with the standard style in .eslintrc.js
+          find ./secondChance-backend -name app.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondChance-backend -name logger.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondChance-backend -name db.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondChance-backend -name authRoutes.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondChance-backend -name secondChanceItemsRoutes.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondChance-backend -name searchRoutes.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondChance-backend -name index.js -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./sentiment -name "*.js" -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          find ./secondchancewebsite -name "*.js" -not -path "*/node_modules/*" -exec ./node_modules/.bin/eslint -c .eslintrc.js {} +
+          echo "Linted all the js files successfully"
+
+  client_build:
+    name: Build client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run build
+        run: |
+          cd secondChance-frontend
+          npm install --no-audit --no-fund
+          npm run build
+          echo "Client-side build successfully"
+
+  docker_build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: [lint_js, client_build]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build back-end image
+        run: docker build -t secondchance-backend ./secondChance-backend
+
+      - name: Build sentiment image
+        run: docker build -t secondchance-sentiment ./sentiment
+
+      - name: Build website image
+        run: docker build -f secondchancewebsite/Dockerfile -t secondchance-website .
+
+      - name: List images
+        run: docker images "secondchance-*"
